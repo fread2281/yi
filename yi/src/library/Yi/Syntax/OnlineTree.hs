@@ -12,6 +12,7 @@ module Yi.Syntax.OnlineTree (Tree(..), manyToks,
                              tokAtOrBefore) where
 
 import Control.Applicative
+import Control.Lens
 import Data.Traversable
 import Data.Foldable
 
@@ -41,8 +42,8 @@ data Tree a = Bin (Tree a) (Tree a)
 
 instance IsTree Tree where
     emptyNode = Tip
-    uniplate (Bin l r) = ([l,r],\[l',r'] -> Bin l' r')
-    uniplate t = ([],const t)
+    treeTraversal f (Bin l r) = Bin <$> f l <*> f r
+    treeTraversal _ t = pure t
 
 manyToks :: P (Tok t) (Tree (Tok t))
 manyToks = manyToks' 1

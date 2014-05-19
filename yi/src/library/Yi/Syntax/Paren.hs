@@ -9,6 +9,7 @@ module Yi.Syntax.Paren where
 
 import Prelude hiding (elem)
 import Control.Applicative
+import Control.Lens
 import Yi.IncrementalParse
 import Yi.Lexer.Alex
 import Yi.Lexer.Haskell
@@ -53,10 +54,10 @@ data Tree t
 
 instance IsTree Tree where
     emptyNode = Expr []
-    uniplate (Paren l g r) = (g,\g' -> Paren l g' r)
-    uniplate (Expr g) = (g,Expr)
-    uniplate (Block s) = (s,Block)
-    uniplate t = ([],const t)
+    treeTraversal f (Paren l g r) = Paren <$> pure l <*> traverse f g <*> pure r
+    treeTraversal f (Expr g) = Expr <$> traverse f g
+    treeTraversal f (Block g) = Expr <$> traverse f g
+    treeTraversal _ t = pure t
 
 -- | Search the given list, and return the 1st tree after the given
 -- point on the given line.  This is the tree that will be moved if

@@ -41,9 +41,9 @@ data Tree t
 
 
 instance IsTree Tree where
-    uniplate (Paren l g r) = ([g], \[g'] -> Paren l g' r)
-    uniplate (Expr g) = (g, Expr)
-    uniplate t = ([],const t)
+    treeTraversal f (Paren l g r) = Paren <$> pure l <*> f g <*> pure r
+    treeTraversal f (Expr g) =  Expr <$> traverse f g
+    treeTraversal _ t = pure t
     emptyNode = Expr []
 
 parse :: P TT (Tree TT)

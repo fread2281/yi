@@ -25,6 +25,7 @@ module Yi.Syntax.Tree (IsTree(..), toksAfter, allToks, tokAtOrBefore, toksInRegi
 
 import Prelude hiding (concatMap, error)
 import Control.Applicative
+import Control.Lens hiding (index,elements)
 import Control.Arrow (first)
 import Data.Maybe
 import Data.Monoid (First(..), Last(..), getFirst, getLast)
@@ -43,11 +44,11 @@ import Yi.Debug
 type Path = [Int]
 type Node t = (Path, t)
 
-class Foldable tree => IsTree tree where
+class (Foldable tree) => IsTree tree where
     -- | Direct subtrees of a tree
     subtrees :: tree t -> [tree t]
-    subtrees = fst . uniplate
-    uniplate :: tree t -> ([tree t], [tree t] -> tree t)
+    subtrees = toListOf treeTraversal
+    treeTraversal :: Traversal' (tree t) (tree t)
     emptyNode :: tree t
 
 toksAfter :: Foldable t1 => t -> t1 a -> [a]
@@ -72,11 +73,22 @@ tokenBasedStrokes tts t _point begin _end = fmap tts $ toksAfter begin t
 -- The path is used to know which nodes we can force or not.
 pruneNodesBefore :: IsTree tree => Point -> Path -> tree (Tok a) -> tree (Tok a)
 pruneNodesBefore _ [] t = t
-pruneNodesBefore p (x:xs) t = rebuild (left' ++ pruneNodesBefore p xs c : rights)
-    where (children,rebuild) = uniplate t
-          (left,c:rights) = splitAt x children
-          left' = fmap replaceEmpty left
-          replaceEmpty s = if getLastOffset s < p then emptyNode else s
+--pruneNodesBefore p (x:xs) t = rebuild (left' ++ pruneNodesBefore p xs c : rights)
+--    where (children,rebuild) = uniplate t
+--          (left,c:rights) = splitAt x children
+--          left' = fmap replaceEmpty left
+--          replaceEmpty s = if getLastOffset s < p then emptyNode else s
+--          -- Do f on the first n elements of structure using lens, left to right
+--          doOnN lens f n structure = mapAccumLOf lens helper 0 structure where
+--            helper acc it = (acc + 1, if acc <= n then f it else it)
+-- TODO: verify these are equal, document
+pruneNodesBefore p (x:xs) t = snd $ mapAccumLOf treeTraversal helper 0 t where
+    helper acc it = (acc + 1, r) where
+      r = case (acc `compare` x) of
+          LT -> if getLastOffset it < p then emptyNode else it
+          EQ -> pruneNodesBefore p xs it
+          GT -> it
+
 
 -- | Given an approximate path to a leaf at the end of the region, return:
 -- (path to leaf at the end of the region,path from focused node to the leaf, small node encompassing the region)
@@ -274,8 +286,8 @@ nodeRegion n = subtreeRegion t
 data Test a = Empty | Leaf a | Bin (Test a) (Test a) deriving (Show, Eq, Foldable)
 
 instance IsTree Test where
-    uniplate (Bin l r) = ([l,r],\[l',r'] -> Bin l' r')
-    uniplate t = ([],\[] -> t)
+    treeTraversal f (Bin l r) = Bin <$> f l <*> f r
+    treeTraversal _ t = pure t
     emptyNode = Empty
 
 type TT = Tok ()

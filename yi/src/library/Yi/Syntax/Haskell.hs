@@ -140,32 +140,36 @@ data Exp t
 
 instance IsTree Exp where
    emptyNode = Expr []
-   uniplate tree = case tree of
-       (ProgMod a b)     -> ([a,b], \[a,b] -> ProgMod a b)
-       (Body x exp exp') -> ([x, exp, exp'], \[x, exp, exp'] -> Body x exp exp')
-       (PModule x (Just e)) -> ([e],\[e] -> PModule x (Just e))
-       (Paren l g r)  -> -- TODO: improve
-         (l:g ++ [r], \(l:gr) -> Paren l (init gr) (last gr))
-       (RHS l g)      -> ([l,g],\[l,g] -> (RHS l g))
-       (Block s)      -> (s,Block)
-       (PLet l s i)   -> ([l,s,i],\[l,s,i] -> PLet l s i)
-       (PIn x ts)     -> (ts,PIn x)
-       (Expr a)       -> (a,Expr)
-       (PClass a b c) -> ([a,b,c],\[a,b,c] -> PClass a b c)
-       (PWhere a b c) -> ([a,b,c],\[a,b,c] -> PWhere a b c)
-       (Opt (Just x)) -> ([x],\[x] -> (Opt (Just x)))
-       (Bin a b) -> ([a,b],\[a,b] -> (Bin a b))
-       (PType a b c d) -> ([a,b,c,d],\[a,b,c,d] -> PType a b c d)
-       (PData a b c d) -> ([a,b,c,d],\[a,b,c,d] -> PData a b c d)
-       (PData' a b) -> ([a,b] ,\[a,b] -> PData' a b)
-       (Context a b c) -> ([a,b,c],\[a,b,c] -> Context a b c)
-       (PGuard xs) -> (xs,PGuard)
-       (PGuard' a b c) -> ([a,b,c],\[a,b,c] -> PGuard' a b c)
-       (TC e) -> ([e],\[e] -> TC e)
-       (DC e) -> ([e],\[e] -> DC e)
-       PModuleDecl a b c d -> ([a,b,c,d],\[a,b,c,d] -> PModuleDecl a b c d)
-       PImport a b c d e -> ([a,b,c,d,e],\[a,b,c,d,e] -> PImport a b c d e)
-       t              -> ([],const t)
+   treeTraversal f (ProgMod a b) = ProgMod <$> f a <*> f b
+   treeTraversal f (Body x exp exp') = Body <$> f x <*> f exp <*> f exp'
+   treeTraversal f (PModule x (Just e)) = PModule <$> pure x <*> fmap Just (f e)
+   
+   --uniplate tree = case tree of
+   --    (ProgMod a b)     -> ([a,b], \[a,b] -> ProgMod a b)
+   --    (Body x exp exp') -> ([x, exp, exp'], \[x, exp, exp'] -> Body x exp exp')
+   --    (PModule x (Just e)) -> ([e],\[e] -> PModule x (Just e))
+   --    (Paren l g r)  -> -- TODO: improve
+   --      (l:g ++ [r], \(l:gr) -> Paren l (init gr) (last gr))
+   --    (RHS l g)      -> ([l,g],\[l,g] -> (RHS l g))
+   --    (Block s)      -> (s,Block)
+   --    (PLet l s i)   -> ([l,s,i],\[l,s,i] -> PLet l s i)
+   --    (PIn x ts)     -> (ts,PIn x)
+   --    (Expr a)       -> (a,Expr)
+   --    (PClass a b c) -> ([a,b,c],\[a,b,c] -> PClass a b c)
+   --    (PWhere a b c) -> ([a,b,c],\[a,b,c] -> PWhere a b c)
+   --    (Opt (Just x)) -> ([x],\[x] -> (Opt (Just x)))
+   --    (Bin a b) -> ([a,b],\[a,b] -> (Bin a b))
+   --    (PType a b c d) -> ([a,b,c,d],\[a,b,c,d] -> PType a b c d)
+   --    (PData a b c d) -> ([a,b,c,d],\[a,b,c,d] -> PData a b c d)
+   --    (PData' a b) -> ([a,b] ,\[a,b] -> PData' a b)
+   --    (Context a b c) -> ([a,b,c],\[a,b,c] -> Context a b c)
+   --    (PGuard xs) -> (xs,PGuard)
+   --    (PGuard' a b c) -> ([a,b,c],\[a,b,c] -> PGuard' a b c)
+   --    (TC e) -> ([e],\[e] -> TC e)
+   --    (DC e) -> ([e],\[e] -> DC e)
+   --    PModuleDecl a b c d -> ([a,b,c,d],\[a,b,c,d] -> PModuleDecl a b c d)
+   --    PImport a b c d e -> ([a,b,c,d,e],\[a,b,c,d,e] -> PImport a b c d e)
+   --    t              -> ([],const t)
 
 -- | The parser
 parse :: P TT (Tree TT)
