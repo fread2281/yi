@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# OPTIONS_HADDOCK show-extensions #-}
 
 -- |
@@ -25,15 +26,21 @@ module Yi.String (isBlank,
                   commonTPrefix',
                   listify,
                   showT,
-                  overInit, overTail
                  ) where
 
 import           Data.Char (toUpper, toLower, isSpace, isAlphaNum)
 import           Data.List (isSuffixOf)
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid
+import           Control.Lens
+import           Control.Applicative
 import qualified Data.Text as T
 import qualified Yi.Rope as R
+
+instance Cons R.YiString R.YiString Char Char where
+  _Cons = prism' (uncurry R.cons) (\r -> (,) <$> R.head r <*> R.tail r)
+instance Snoc R.YiString R.YiString Char Char where
+  _Snoc = prism' (uncurry R.snoc) (\r -> (,) <$> R.init r <*> R.last r)
 
 -- | Helper that shows then packs the 'Text', for all those cases
 -- where we use 'show'.
@@ -96,26 +103,6 @@ fillText margin = map (R.unwords . reverse) . fill 0 [] . R.words
     fill n acc (w:ws)
       | n + R.length w >= margin = acc : fill (R.length w) [w] ws
       | otherwise = fill (n + 1 + R.length w) (w:acc) ws
-
--- | @overInit f@ runs f over the 'R.init' of the input if possible,
--- preserving the 'R.last' element as-is. If given a string with
--- length ≤ 1, it effectively does nothing.
---
--- Also see 'overTail'.
-overInit :: (R.YiString -> R.YiString) -> R.YiString -> R.YiString
-overInit f t = case (R.init t, R.last t) of
-  (Just xs, Just x) -> f xs `R.snoc` x
-  _ -> t
-
--- | @overInit f@ runs f over the 'R.tail' of the input if possible,
--- preserving the 'R.head' element as-is. If given a string with
--- length ≤ 1, it effectively does nothing.
---
--- Also see 'overInit'.
-overTail :: (R.YiString -> R.YiString) -> R.YiString -> R.YiString
-overTail f t = case (R.head t, R.tail t) of
-  (Just x, Just xs) -> x `R.cons` f xs
-  _ -> t
 
 -- | Inverse of 'lines''. In contrast to 'Prelude.unlines', this does
 -- not add an empty line at the end.

@@ -687,7 +687,7 @@ modifyExtendedSelectionB unit transform
 linePrefixSelectionB :: R.YiString -- ^ The string that starts a line comment
                      ->  BufferM ()
 linePrefixSelectionB s =
-  modifyExtendedSelectionB Line . overInit $ mapLines (s <>)
+  modifyExtendedSelectionB Line . over _init $ mapLines (s <>)
 
 -- | Uncomments the selection using the given line comment
 -- starting string. This only works for the comments which

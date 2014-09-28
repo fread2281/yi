@@ -31,6 +31,7 @@ where
 
 import           Control.Applicative
 import           Control.Monad
+import           Control.Lens
 import           Data.Algorithm.Diff
 import           Data.Char (isSpace)
 import           Data.Monoid (mconcat)
@@ -40,7 +41,7 @@ import           Yi.Buffer.Misc
 import           Yi.Region
 import           Yi.Rope (YiString)
 import qualified Yi.Rope as R
-import           Yi.String (overInit)
+import           Yi.String ()
 import           Yi.Utils
 import           Yi.Window (winRegion)
 
@@ -142,7 +143,7 @@ blockifyRegion r = savingPointB $ do
 joinLinesB :: Region -> BufferM ()
 joinLinesB = savingPointB . modifyRegionClever g'
   where
-    g' = overInit $ mconcat . pad . R.lines
+    g' = over _init $ mconcat . pad . R.lines
 
     pad :: [R.YiString] -> [R.YiString]
     pad [] = []
@@ -153,4 +154,4 @@ joinLinesB = savingPointB . modifyRegionClever g'
 -- | Concatenates lines in the region preserving the trailing newline
 -- if any.
 concatLinesB :: Region -> BufferM ()
-concatLinesB = savingPointB . modifyRegionClever (overInit $ R.filter (/= '\n'))
+concatLinesB = savingPointB . modifyRegionClever (over _init $ R.filter (/= '\n'))
